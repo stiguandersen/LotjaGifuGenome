@@ -1,0 +1,483 @@
+### A chromosome-scale Lotus japonicus Gifu genome assembly indicates that 
+### symbiotic islands are not a general feature of legume genomes
+
+## Analysis of symbiotic islands first described by Pecrix et al 2018 [PMID: 30397259]
+## in Lotus japonicus and Medicago truncatula
+
+## 2020 03 31
+
+## Analysed in R version 3.4.3
+
+### read data
+{
+  # set data directory
+  dir.data=""
+  setwd(dir.data)
+  
+  # Lotus expression data
+  lotus.atlas.in <- read.delim("20200316_gifu_atlas.txt")
+  rownames(lotus.atlas.in) <- lotus.atlas.in$Gene_ID
+  lotus.atlas <- lotus.atlas.in[,-1]
+  head(lotus.atlas)
+  
+  # Medicago expression data
+  medicago.expr.in <- read.delim("20200331_normalized_gene-counts_medicago.txt")
+  rownames(medicago.expr.in) <- medicago.expr.in$ID
+  medicago.expr <- medicago.expr.in[,-1]
+  head(medicago.expr)
+  
+
+  # symbiosis island data
+  sym.island.dir=""
+  setwd(sym.island.dir)
+  sym.island <- read.delim("all_sym_islands_melted.txt")
+  head(sym.island)
+  
+
+}
+
+
+### count islands with multiple coding genes conserved in Lotus
+{
+  
+  # count the total number of Medicago genes residing in symbiotic islands
+  nrow(sym.island) #8774
+  
+  # Create a field that combines symbiotic island name with the Lotus hit in syntenic region
+  sym.island$check.dup <- paste(sym.island$SRI_., sym.island$Lj_gene_in_syntenic_region, sep="_")
+  
+  
+  # Look only at coding genes, eliminating the non-coding RNAs
+  genes <- subset(sym.island, !(Annotation == "ncRNA"))
+  
+  # There are 8144 protein coding genes in symbiotic islands
+  nrow(genes) #8144
+  
+  # All 760 islands contain protein coding genes 
+  sym.island.count <- aggregate(sym.island$SRI_., by=list(as.character(sym.island$SRI_.)), length)
+  genes.island.count <- aggregate(genes$SRI_., by=list(as.character(genes$SRI_.)), length)
+  nrow(sym.island.count) #760
+  nrow(genes.island.count) #760
+
+  
+  ### filter for protein coding genes with syntenic lotus hits
+  library(data.table)
+  genes.lotus <- subset(genes, Lj_gene_in_syntenic_region %like% "Lotja")
+  genes.lotus <- genes.lotus[order(genes.lotus$check.dup),]
+  # There are 533 islands with that contain lotus syntenic hits
+  genes.island.count.lotus <- aggregate(genes.lotus$SRI_., by=list(as.character(genes.lotus$SRI_.)), length)
+  nrow(genes.island.count.lotus) # 533
+  
+  # look only at unique lotus genes
+  genes.lotus.unique <- genes.lotus[!duplicated(genes.lotus$check.dup),]
+  genes.island.count.lotus.unique <- aggregate(genes.lotus.unique$SRI_., by=list(as.character(genes.lotus.unique$SRI_.)), length)
+  genes.island.count.lotus.unique.3 <- subset(genes.island.count.lotus.unique, x > 2)
+  # There are 533 islands with unique lotus syntenic hits and 266 with at least 3 hits
+  nrow(genes.island.count.lotus.unique) #533
+  nrow(genes.island.count.lotus.unique.3) #266
+  
+  
+  # including only the nru, nrd, and nrn islands
+  genes.nod <- subset(genes, (SRI_. %like% "NRU" | SRI_. %like% "NRD" | SRI_. %like% "NRN" ) )
+  nrow(genes.nod) # 4747
+  # There are 443 NRU, NRD, and NRN islands in total
+  island.nod.count <- aggregate(genes.nod$SRI_., by=list(as.character(genes.nod$SRI_.)), length)
+  nrow(island.nod.count) #443
+  
+  # filter for those with syntenic lotus hits
+  library(data.table)
+  genes.lotus.nod <- subset(genes.nod, Lj_gene_in_syntenic_region %like% "Lotja")
+  nrow(genes.lotus.nod) # 1479
+  genes.lotus.nod <- genes.lotus.nod[order(genes.lotus.nod$check.dup),]
+  genes.island.count.lotus.nod <- aggregate(genes.lotus.nod$SRI_., by=list(as.character(genes.lotus.nod$SRI_.)), length)
+  ### 334 out of 443 islands have lotus syntenic hits
+  nrow(genes.island.count.lotus.nod) #334
+  
+  genes.lotus.unique.nod <- genes.lotus.nod[!duplicated(genes.lotus.nod$check.dup),]
+  nrow(genes.lotus.unique.nod) #979
+  genes.island.count.lotus.unique.nod <- aggregate(genes.lotus.unique.nod$SRI_., by=list(as.character(genes.lotus.unique.nod$SRI_.)), length)
+  nrow(genes.island.count.lotus.unique.nod) #334
+  genes.island.count.lotus.unique.3.nod <- subset(genes.island.count.lotus.unique.nod, x > 2)
+  ## and 177 of these have more than three lotus hits.
+  nrow(genes.island.count.lotus.unique.3.nod) #177
+  
+  # count islands summary results
+  nrow(sym.island.count.total) #760, all islands
+  nrow(sym.island.count.total.genes.only) #760, no ncRNAs
+  nrow(genes.island.count.lotus.unique) #553, no ncRNA, with lotus microsyntenic genes
+  nrow(genes.island.count.lotus.unique.3) #266, no ncRNA with at least three lotus microsyntenic genes
+  nrow(island.nod.count) #443, no ncRNAs, only nod-related islands
+  nrow(genes.island.count.lotus.unique.nod) #334, no ncRNA, with lotus microsyntenic genes, only nod-related islands
+  nrow(genes.island.count.lotus.unique.3.nod) #177, no ncRNA with at least three lotus microsyntenic genes, only nod-related islands
+  
+}
+
+
+### count islands with multiple lncRNAs conserved in Lotus
+{
+  colnames(sym.island)
+  ncRNA <- subset(sym.island, Annotation == "ncRNA")
+  nrow(ncRNA) # 630
+  head(ncRNA)
+  
+  # filter for those with syntenic lotus hits
+  library(data.table)
+  ncRNA.lotus <- subset(ncRNA, Lj_gene_in_syntenic_region %like% "Lj")
+  nrow(ncRNA.lotus) #40
+  
+  # count islands
+  ncRNA.island.count <- aggregate(ncRNA.lotus$SRI_., by=list(as.character(ncRNA.lotus$SRI_.)), length)
+  ncRNA.island.count.2 <- subset(ncRNA.island.count, x > 1)
+  ncRNA.island.count.3 <- subset(ncRNA.island.count, x > 2)
+  # There are 6 islands with 2 conserved lotus non-coding rnas, none with more than two
+  nrow(ncRNA.island.count.2) #6
+  nrow(ncRNA.island.count.3) #0
+  
+}
+
+
+### filter expression data and calculate reponses
+{
+  
+  #Gifu expression atlas
+  {
+    ## normalize and filter lowly expressed genes
+    library(PoissonSeq)
+    norm.facs.pss <- PS.Est.Depth(lotus.atlas, iter=5, ct.sum=5, ct.mean=0.2)
+    norm.facs.pss
+    lotus.atlas.norm <- data.frame(t(t(lotus.atlas)/norm.facs.pss))
+    str(lotus.atlas.norm)
+    head(lotus.atlas.norm)
+  }
+  
+  #Medicago
+  {
+    ## normalize and filter lowly expressed genes
+    library(PoissonSeq)
+    colnames(medicago.expr)
+    medicago <- medicago.expr
+    head(medicago)
+    norm.facs.pss <- PS.Est.Depth(medicago, iter=5, ct.sum=5, ct.mean=0.2)
+    norm.facs.pss
+    medicago.norm <- data.frame(t(t(medicago)/norm.facs.pss))
+    str(medicago.norm)
+    head(medicago.norm)
+    
+  }
+ 
+  # calculate log(root/nodule) values
+  {
+    
+    # calculate lotus nod response
+    colnames(lotus.atlas)
+    gifu.10dpi <- log( 
+                       ((lotus.atlas$nodules.10.dpi_1 + lotus.atlas$nodules.10.dpi_2 + lotus.atlas$nodules.10.dpi_3 +1))
+                        /
+                        ((lotus.atlas$X3.dpi.root.mock_1 + lotus.atlas$X3.dpi.root.mock_2 + lotus.atlas$X3.dpi.root.mock_3 + 1))
+                    ,2 )
+  
+    hist(gifu.10dpi)
+    
+    # add the nodulation response column to the root and nodule expression matrix
+    lotus.atlas.norm$gifu.10dpi <- gifu.10dpi
+    
+   
+   ## calculate medicago nod response
+   colnames(medicago.norm)
+    
+    medicago.10dpi <- log( (medicago.norm$MtNod10dpi_1 + medicago.norm$MtNod10dpi_2 + medicago.norm$MtNod10dpi_3 +1) / 
+                        (medicago.norm$MtNod0dpi_1 + medicago.norm$MtNod0dpi_2 + medicago.norm$MtNod0dpi_3 +1) ,2)
+    
+    
+    medicago.norm$medicago.10dpi <- medicago.10dpi
+  } 
+}
+  
+
+### merge expression and symbiosis island data
+{
+  colnames(sym.island)
+  sym.island.slim <- sym.island[,c(1:5,7:8,34)]
+  head(sym.island.slim)
+  nrow(sym.island.slim) # 8774
+  
+  # Merge symbiotic island data with medicago expression data
+  sym.island.slim.merged <- merge(sym.island.slim, medicago.norm, by.x="Mt_gene", by.y="row.names")
+  head(sym.island.slim.merged)
+  nrow(sym.island.slim.merged) #8144
+  
+  # Merge with the lotus data
+  sym.island.slim.merged <- merge(sym.island.slim.merged, lotus.atlas.norm, by.x="Lj_Gifu_gene", by.y="row.names")
+  head(sym.island.slim.merged)
+  nrow(sym.island.slim.merged) # 3729
+  
+  # Write the merged data to a table
+  filename <- paste(Sys.Date(), "sym_island_data_merged.txt", sep="_")
+  write.table(sym.island.slim.merged, file=filename, quote = FALSE, row.names = FALSE, sep="\t")
+
+  
+  
+  # Select only genes with lotus matches
+  library(plyr)
+  # select only genes with a lotus syntenic hit
+  sym.island.slim.merged.2 <- subset(sym.island.slim.merged, Lj_gene_in_syntenic_region %like% "Lotja")
+  nrow(sym.island.slim.merged) #3728
+  # 2269 out of 2341 genes with lotus matches have expression data available for both lotus and medicago
+  nrow(sym.island.slim.merged.2) # 2269
+  nrow(genes.lotus) # 2341
+  
+  # write table with the merged symbiotic island and expression data
+  filename <- paste(Sys.Date(), "sym.island.expr.data.txt", sep="_")
+  write.table(sym.island.slim.merged.2, file=filename, quote = FALSE, row.names = FALSE, sep="\t")
+  
+  
+  #Sort by Island ID, Lj syntenic hit and Medicago gene id
+  sym.island.slim.merged.2 <- arrange(sym.island.slim.merged.2, SRI_., Lj_gene_in_syntenic_region, Mt_gene)
+  # remove duplicated lotus genes, keeping the first matching medicago gene id
+  sym.island.slim.merged.2.unique <- sym.island.slim.merged.2[!duplicated(sym.island.slim.merged.2$check.dup),]
+  
+  # 1478 out of 2269 genes are have unique lotus matches 
+  nrow(sym.island.slim.merged.2) # 2269
+  nrow(sym.island.slim.merged.2.unique) # 1478
+  
+  # test if the lotus and medicago nodulation responses are correlated - they are
+  par(mfrow=c(1,1))
+  smoothScatter(sym.island.slim.merged.2$medicago.10dpi, sym.island.slim.merged.2$gifu.10dpi )
+  plot(sym.island.slim.merged.2$medicago.10dpi, sym.island.slim.merged.2$gifu.10dpi )
+  cor(sym.island.slim.merged.2$medicago.10dpi, sym.island.slim.merged.2$gifu.10dpi ) # 0.47
+  cor.test(sym.island.slim.merged.2$medicago.10dpi, sym.island.slim.merged.2$gifu.10dpi )
+  
+}
+
+
+### analyse expression data for the nodule regulated islands (NRU, NRD, NRN)
+{
+  
+  # roots versus nodules
+  # Extract data for the NRU, NRD, and NRN islands, considering only unique lotus genes with one medicago match per gene
+  nru <- subset(sym.island.slim.merged.2.unique, SRI_. %like% "NRU")
+  nrd <- subset(sym.island.slim.merged.2.unique, SRI_. %like% "NRD")
+  nrn <- subset(sym.island.slim.merged.2.unique, SRI_. %like% "NRN")
+  nru_nrd_nrn <- subset(sym.island.slim.merged.2.unique, (SRI_. %like% "NRU" | SRI_. %like% "NRD" | SRI_. %like% "NRN" ) )
+  nrow(nru_nrd_nrn) #943
+  nrow(nru) #421
+  nrow(nrd) #218
+  nrow(nrn) #304
+  
+  
+  
+  ## scatterplots for 10dpi nodules versus roots for the different island types
+  filename <- paste(Sys.Date(), "nodule.response.scatter.pdf", sep="_")
+  pdf(filename, 8, 3)
+    par(mfrow=c(1,3))
+    cor.nru <- round(cor(nru$medicago.10dpi, nru$gifu.10dpi), digits=3)
+    cor.nrd <- round(cor(nrd$medicago.10dpi, nrd$gifu.10dpi), digits=3)
+    cor.nrn <- round(cor(nrn$medicago.10dpi, nrn$gifu.10dpi), digits=3)
+    smoothScatter(nru$medicago.10dpi, nru$gifu.10dpi, main="Nodule upregulated", xlim=c(-12,12), ylim=c(-12,12), xlab=paste("Medicago", cor.nru), ylab="Gifu")
+    smoothScatter(nrn$medicago.10dpi, nrn$gifu.10dpi, main="Not regulated", xlim=c(-12,12), ylim=c(-12,12), xlab=paste("Medicago", cor.nrn), ylab="Gifu")
+    smoothScatter(nrd$medicago.10dpi, nrd$gifu.10dpi, main="Nodule downregulated", xlim=c(-12,12), ylim=c(-12,12), xlab=paste("Medicago", cor.nrd), ylab="Gifu")
+  dev.off()
+ 
+  
+}
+
+
+### are the genes in the symbiotic islands co-regulated?
+### that is, do they have higher pearson correlation coefficients than the non-regulated genes?
+
+# test for all genes
+{
+
+# loop through all the islands
+islands <- levels(factor(sym.island.slim.merged.2$SRI_.))
+j=1
+gifu.cor <- NULL
+medicago.cor <- NULL
+island.size <- NULL
+gifu.10dpi.mean <- NULL
+medicago.10dpi.mean <- NULL
+
+# check which columns are used for correlation analysis
+colnames(sym.island.slim.merged.2)
+colnames(sym.island.slim.merged.2[,c(46:54, 82:84, 112:119)])
+colnames(sym.island.slim.merged.2[,c(9:29)])
+
+for (i in islands) {
+  island <- subset(sym.island.slim.merged.2, SRI_.==i)
+  # log the expression values
+  for.cor.gifu <- as.matrix(log(1+island[,c(46:54, 82:84, 112:119)])) # root and nodule samples
+  # calculate all correlation coefficients
+  island.cor.gifu <- cor(t(for.cor.gifu))
+  # average correlation coefficients for each island
+  gifu.cor[j] <- mean(island.cor.gifu[row(island.cor.gifu)!=col(island.cor.gifu)])
+  
+  # log the expression values
+  for.cor.medicago <- as.matrix(log(1+island[,c(9:29)]))
+  # calculate all correlation coefficients
+  island.cor.medicago <- cor(t(for.cor.medicago))
+  # average correlation coefficients for each island
+  medicago.cor[j] <- mean(island.cor.medicago[row(island.cor.medicago)!=col(island.cor.medicago)])
+  
+  island.size[j] <- nrow(island)
+  
+  # calculate average log(nodule/root value for each island)
+  gifu.10dpi.mean[j] <- mean(island$gifu.10dpi)
+  medicago.10dpi.mean[j] <- mean(island$medicago.10dpi)
+  
+  j=j+1
+  
+}
+
+# check that lengths match
+length(gifu.cor)
+length(medicago.cor)
+length(islands)
+
+# bind together in a correlation summary
+cor.summary <- data.frame(islands, medicago.cor, gifu.cor,  island.size, gifu.10dpi.mean, medicago.10dpi.mean)
+head(cor.summary)
+
+# check correlation between medicago and lotus symbiotic island correlation coefficients.
+par(mfrow=c(1,1))
+smoothScatter(cor.summary$medicago.cor, cor.summary$gifu.cor)
+cor.summary.complete <- cor.summary[complete.cases(cor.summary),]
+head(cor.summary.complete)
+cor(cor.summary.complete$medicago.cor, cor.summary.complete$gifu.cor) # 0.642
+
+
+# write the correlation summary to file
+filename <- paste(Sys.Date(), "all.genes.correlation.summary.txt", sep="_")
+write.table(cor.summary, file=filename, quote = FALSE, row.names = FALSE, sep="\t")
+
+# plot histograms of correlation coefficients for NRU, NRN, and NRD islands
+nru <- subset(cor.summary, islands %like% "NRU" & island.size >1)
+nrn <- subset(cor.summary, islands %like% "NRN" & island.size >1)
+nrd <- subset(cor.summary, islands %like% "NRD" & island.size >1)
+nru.count <- nrow(nru)
+nrn.count <- nrow(nrn)
+nrd.count <- nrow(nrd)
+
+## make histograms
+filename <- paste(Sys.Date(), "all.genes.histogram.pdf", sep="_")
+pdf(filename, 9,6)
+  par(mfrow=c(2,3))
+  hist(nru$medicago.cor, xlim=c(-1,1), breaks=60, xlab =paste("Medicago", nru.count))
+  hist(nrn$medicago.cor, xlim=c(-1,1), breaks=60, xlab =paste("Medicago", nrn.count))
+  hist(nrd$medicago.cor, xlim=c(-1,1), breaks=60, xlab =paste("Medicago", nrd.count))
+  hist(nru$gifu.cor, xlim=c(-1,1), breaks=60, xlab =paste("Gifu", nru.count))
+  hist(nrn$gifu.cor, xlim=c(-1,1), breaks=60, xlab =paste("Gifu", nrn.count))
+  hist(nrd$gifu.cor, xlim=c(-1,1), breaks=60, xlab =paste("Gifu", nrd.count))
+dev.off()
+
+}
+
+# test correlations for only the genes with unique Lotus hits in syntenic region
+{
+  islands <- levels(factor(sym.island.slim.merged.2.unique$SRI_.))
+  j=1
+  gifu.cor <- NULL
+  mg20.cor <- NULL
+  medicago.cor <- NULL
+  island.size <- NULL
+  gifu.10dpi.mean <- NULL
+  medicago.10dpi.mean <- NULL
+  
+  colnames(sym.island.slim.merged.2)
+  
+  for (i in islands) {
+    island <- subset(sym.island.slim.merged.2.unique, SRI_.==i)
+    # log the expression values
+    for.cor.gifu <- as.matrix(log(1+island[,c(46:54, 82:84, 112:119)])) # root and nodule samples
+    # calculate all correlation coefficients
+    island.cor.gifu <- cor(t(for.cor.gifu))
+    # average correlation coefficients for each island
+    gifu.cor[j] <- mean(island.cor.gifu[row(island.cor.gifu)!=col(island.cor.gifu)])
+    
+    # log the expression values
+    for.cor.medicago <- as.matrix(log(1+island[,c(9:29)]))
+    # calculate all correlation coefficients
+    island.cor.medicago <- cor(t(for.cor.medicago))
+    # average correlation coefficients for each island
+    medicago.cor[j] <- mean(island.cor.medicago[row(island.cor.medicago)!=col(island.cor.medicago)])
+    
+    island.size[j] <- nrow(island)
+    
+    # calculate average log(nodule/root value for each island)
+    gifu.10dpi.mean[j] <- mean(island$gifu.10dpi)
+    medicago.10dpi.mean[j] <- mean(island$medicago.10dpi)
+    
+    j=j+1
+    
+  }
+  
+  length(gifu.cor)
+  length(medicago.cor)
+  length(islands)
+  
+  # check correlation between medicago and lotus symbiotic island correlation coefficients.
+  cor.summary <- data.frame(islands, medicago.cor, gifu.cor, island.size, gifu.10dpi.mean, medicago.10dpi.mean)
+  head(cor.summary)
+  str(cor.summary)
+  smoothScatter(cor.summary$medicago.cor, cor.summary$gifu.cor)
+  cor.summary.complete <- cor.summary[complete.cases(cor.summary),]
+  head(cor.summary.complete)
+  nrow(cor.summary.complete)
+  cor(cor.summary.complete$medicago.cor, cor.summary.complete$gifu.cor) # 0.27
+
+  # write to file
+  filename <- paste(Sys.Date(), "correlation.summary.lotus.unique.txt", sep="_")
+  write.table(cor.summary, file=filename, quote = FALSE, row.names = FALSE, sep="\t")
+  
+  # plot histograms of correlation coefficients for NRU, NRN, and NRD islands
+  nru <- subset(cor.summary, islands %like% "NRU" & island.size >1)
+  nrn <- subset(cor.summary, islands %like% "NRN" & island.size >1)
+  nrd <- subset(cor.summary, islands %like% "NRD" & island.size >1)
+  nru.count <- nrow(nru)
+  nrn.count <- nrow(nrn)
+  nrd.count <- nrow(nrd)
+
+  
+  filename <- paste(Sys.Date(), "unique.lotus.genes.pdf", sep="_")
+  pdf(filename, 9,6)
+    par(mfrow=c(2,3))
+    hist(nru$medicago.cor, xlim=c(-1,1), breaks=60, xlab =paste("Medicago", nru.count))
+    hist(nrn$medicago.cor, xlim=c(-1,1), breaks=60, xlab =paste("Medicago", nrn.count))
+    hist(nrd$medicago.cor, xlim=c(-1,1), breaks=60, xlab =paste("Medicago", nrd.count))
+    hist(nru$gifu.cor, xlim=c(-1,1), breaks=80, xlab =paste("Gifu", nru.count))
+    hist(nrn$gifu.cor, xlim=c(-1,1), breaks=60, xlab =paste("Gifu", nrn.count))
+    hist(nrd$gifu.cor, xlim=c(-1,1), breaks=60, xlab =paste("Gifu", nrd.count))
+  dev.off()
+  
+  
+  
+  ### islands with at least three lotus members
+  nru.3 <- subset(cor.summary, islands %like% "NRU" & island.size >2)
+  nrn.3 <- subset(cor.summary, islands %like% "NRN" & island.size >2)
+  nrd.3 <- subset(cor.summary, islands %like% "NRD" & island.size >2)
+  nru.count <- nrow(nru.3)
+  nrn.count <- nrow(nrn.3)
+  nrd.count <- nrow(nrd.3)
+  
+  filename <- paste(Sys.Date(), "nru.3.txt", sep="_")
+  write.table(nru.3, file=filename, quote = FALSE, row.names = FALSE, sep="\t")
+  filename <- paste(Sys.Date(), "nrn.3.txt", sep="_")
+  write.table(nrn.3, file=filename, quote = FALSE, row.names = FALSE, sep="\t")
+  filename <- paste(Sys.Date(), "nrd.3.txt", sep="_")
+  write.table(nrd.3, file=filename, quote = FALSE, row.names = FALSE, sep="\t")
+  
+  
+  filename <- paste(Sys.Date(), "unique.lotus.genes.3.pdf", sep="_")
+  pdf(filename, 9,6)
+    par(mfrow=c(2,3))
+    hist(nru.3$medicago.cor, xlim=c(-1,1), breaks=60, xlab =paste("Medicago", nru.count))
+    hist(nrn.3$medicago.cor, xlim=c(-1,1), breaks=50, xlab =paste("Medicago", nrn.count))
+    hist(nrd.3$medicago.cor, xlim=c(-1,1), breaks=60, xlab =paste("Medicago", nrd.count))
+    hist(nru.3$gifu.cor, xlim=c(-1,1), breaks=60, xlab =paste("Gifu", nru.count))
+    hist(nrn.3$gifu.cor, xlim=c(-1,1), breaks=60, xlab =paste("Gifu", nrn.count))
+    hist(nrd.3$gifu.cor, xlim=c(-1,1), breaks=60, xlab =paste("Gifu", nrd.count))
+  dev.off()
+  
+  
+} 
+  
+  
